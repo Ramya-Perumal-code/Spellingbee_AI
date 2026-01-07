@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic Spelling Bee</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: #2d2d2d;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        h1 {
+            margin-bottom: 2rem;
+            color: #61dafb;
+        }
+
+        .status {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            min-height: 1.5em;
+            color: #ccc;
+        }
+
+        button {
+            background-color: #61dafb;
+            color: #20232a;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            color: #888;
+        }
+
+        .result {
+            margin-top: 1rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .correct {
+            color: #4caf50;
+        }
+
+        .incorrect {
+            color: #f44336;
+        }
+
+        .scoreboard {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: #aaa;
+            background: #252525;
+            padding: 5px 15px;
+            border-radius: 15px;
+            display: inline-block;
+        }
+
+        .definition-box {
+            background-color: #333;
+            color: #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-style: italic;
+            font-size: 0.9rem;
+            min-height: 2rem;
+            display: none;
+            /* Hidden by default */
+        }
+
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, .3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+            display: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🐝 Spelling Bee Agent</h1>
+
+        <div class="scoreboard">
+            <span id="scoreCorrect" class="correct">Correct: 0</span> |
+            <span id="scoreIncorrect" class="incorrect">Incorrect: 0</span>
+        </div>
+
+        <div class="status" id="statusText">Ready to start.</div>
+
+        <div class="definition-box" id="definitionBox"></div>
+
+        <div class="controls">
+            <button id="nextBtn" onclick="nextWord()">Next Word</button>
+            <button id="listenBtn" onclick="listen()" disabled>🎤 Answer</button>
+        </div>
+
+        <div class="result" id="resultText"></div>
+        <div class="loader" id="loader"></div>
+    </div>
+
+    <script>
+        const statusEl = document.getElementById('statusText');
+        const resultEl = document.getElementById('resultText');
+        const nextBtn = document.getElementById('nextBtn');
+        const listenBtn = document.getElementById('listenBtn');
+        const loader = document.getElementById('loader');
+        const defBox = document.getElementById('definitionBox');
+        const scoreCorrect = document.getElementById('scoreCorrect');
+        const scoreIncorrect = document.getElementById('scoreIncorrect');
+
+        function updateScore(score) {
+            if (score) {
+                scoreCorrect.innerText = "Correct: " + score.correct;
+                scoreIncorrect.innerText = "Incorrect: " + score.incorrect;
+            }
+        }
+
+        async function nextWord() {
+            setLoading(true);
+            statusEl.innerText = "Agent is speaking...";
+            resultEl.innerText = "";
+            resultEl.className = "result";
+            defBox.style.display = 'none';
+            defBox.innerText = "";
+            nextBtn.disabled = true;
+            listenBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/next_word', { method: 'POST' });
+                const data = await response.json();
+
+                if (response.ok) {
+                    statusEl.innerText = "Waiting for your answer...";
+                    listenBtn.disabled = false;
+
+                    if (data.definition) {
+                        defBox.innerText = "Hint: " + data.definition;
+                        defBox.style.display = 'block';
+                    }
+                    updateScore(data.score);
+                } else {
+                    statusEl.innerText = "Error: " + data.error;
+                }
+            } catch (err) {
+                statusEl.innerText = "Connection Error";
+            } finally {
+                setLoading(false);
+                nextBtn.disabled = false;
+            }
+        }
+
+        async function listen() {
+            setLoading(true);
+            statusEl.innerText = "Listening (10s)...";
+            listenBtn.disabled = true;
+            nextBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/listen', { method: 'POST' });
+                const data = await response.json();
+
+                updateScore(data.score);
+
+                if (data.result === 'correct') {
+                    resultEl.innerText = "CORRECT! ✅";
+                    resultEl.className = "result correct";
+                    statusEl.innerText = "You said: " + data.heard;
+                } else if (data.result === 'incorrect') {
+                    resultEl.innerText = "INCORRECT ❌";
+                    resultEl.className = "result incorrect";
+                    statusEl.innerText = "You said: " + data.heard + " (Target: " + data.target + ")";
+                } else {
+                    statusEl.innerText = "Didn't hear anything.";
+                }
+            } catch (err) {
+                statusEl.innerText = "Error processing answer.";
+            } finally {
+                setLoading(false);
+                nextBtn.disabled = false;
+            }
+        }
+
+        function setLoading(isLoading) {
+            loader.style.display = isLoading ? "inline-block" : "none";
+        }
+    </script>
+</body>
+
+</html>

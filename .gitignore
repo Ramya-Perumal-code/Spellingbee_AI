@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+
+# Database
+my_database.db
+*.db
+
+# Data files
+bee_words.xlsx
+data.xlsx
+
+# Audio files
+temp_voice.wav
+*.wav
+
+# IDEs
+.vscode/
+.idea/
