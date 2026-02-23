@@ -90,14 +90,26 @@
         .definition-box {
             background-color: #333;
             color: #ddd;
-            padding: 10px;
+            padding: 15px;
             margin: 10px 0;
             border-radius: 5px;
-            font-style: italic;
             font-size: 0.9rem;
             min-height: 2rem;
             display: none;
+            text-align: left;
             /* Hidden by default */
+        }
+
+        .definition-field {
+            margin-bottom: 8px;
+        }
+
+        .field-label {
+            color: #61dafb;
+            font-weight: bold;
+            display: block;
+            font-size: 0.8rem;
+            text-transform: uppercase;
         }
 
         .loader {
@@ -112,10 +124,58 @@
             display: none;
         }
 
+        .order-selector {
+            margin-bottom: 0.5rem;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        .order-selector select,
+        .filter-group select {
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .filter-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 1.5rem;
+            background: #252525;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .filter-group label {
+            font-size: 0.75rem;
+            color: #61dafb;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
         @keyframes spin {
             to {
                 transform: rotate(360deg);
             }
+        }
+
+        .instruction {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 1rem;
+            font-style: italic;
         }
     </style>
 </head>
@@ -131,26 +191,133 @@
 
         <div class="status" id="statusText">Ready to start.</div>
 
+        <div class="filter-container">
+            <div class="filter-group">
+                <label for="yearFilter">Year</label>
+                <select id="yearFilter" onchange="updateFilters()">
+                    <option value="all">All Years</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="listFilter">List</label>
+                <select id="listFilter" onchange="updateFilters()">
+                    <option value="all">All Lists</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="diffFilter">Difficulty</label>
+                <select id="diffFilter" onchange="updateFilters()">
+                    <option value="all">All Levels</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="orderSelect">Order</label>
+                <select id="orderSelect" onchange="changeOrder()">
+                    <option value="random">Random</option>
+                    <option value="alphabetical">Alphabetical</option>
+                </select>
+            </div>
+        </div>
+
         <div class="definition-box" id="definitionBox"></div>
 
         <div class="controls">
             <button id="nextBtn" onclick="nextWord()">Next Word</button>
-            <button id="listenBtn" onclick="listen()" disabled>🎤 Answer</button>
+            <button id="resumeBtn" onclick="resumeGame()"
+                style="display: none; background-color: #61dafb; color: #20232a;">▶ Resume</button>
         </div>
 
         <div class="result" id="resultText"></div>
         <div class="loader" id="loader"></div>
+
+        <div class="instruction">💡 Tip: Say <strong>"stop"</strong> to pause or <strong>"repeat"</strong> to hear the
+            word again.
+        </div>
     </div>
 
     <script>
         const statusEl = document.getElementById('statusText');
         const resultEl = document.getElementById('resultText');
         const nextBtn = document.getElementById('nextBtn');
-        const listenBtn = document.getElementById('listenBtn');
+        const resumeBtn = document.getElementById('resumeBtn');
         const loader = document.getElementById('loader');
         const defBox = document.getElementById('definitionBox');
         const scoreCorrect = document.getElementById('scoreCorrect');
         const scoreIncorrect = document.getElementById('scoreIncorrect');
+        const orderSelect = document.getElementById('orderSelect');
+        const yearFilter = document.getElementById('yearFilter');
+        const listFilter = document.getElementById('listFilter');
+        const diffFilter = document.getElementById('diffFilter');
+
+        async function loadFilters() {
+            try {
+                const response = await fetch('/api/filters');
+                const data = await response.json();
+
+                populateSelect(yearFilter, data.years, "All Years");
+                populateSelect(listFilter, data.lists, "All Lists");
+                populateSelect(diffFilter, data.difficulties, "All Levels");
+            } catch (err) {
+                console.error("Failed to load filters", err);
+            }
+        }
+
+        function populateSelect(selectEl, values, allLabel) {
+            selectEl.innerHTML = `<option value="all">${allLabel}</option>`;
+            values.forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.innerText = val;
+                selectEl.appendChild(opt);
+            });
+        }
+
+        async function updateFilters() {
+            const year = yearFilter.value;
+            const list = listFilter.value;
+            const diff = diffFilter.value;
+
+            try {
+                const response = await fetch('/api/update_filters', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ year, list, difficulty: diff })
+                });
+                const data = await response.json();
+                resultEl.innerText = `Filters updated. ${data.word_count} words available.`;
+                resultEl.className = "result";
+            } catch (err) {
+                console.error("Failed to update filters", err);
+            }
+        }
+
+        async function changeOrder() {
+            const order = orderSelect.value;
+            try {
+                await fetch('/api/set_order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order: order })
+                });
+                resultEl.innerText = "Order updated to " + order;
+            } catch (err) {
+                console.error("Failed to update order", err);
+            }
+        }
+
+        async function resumeGame() {
+            resumeBtn.style.display = 'none';
+            nextBtn.style.display = 'inline-block';
+            nextBtn.disabled = true;
+            statusEl.innerText = "Resuming...";
+
+            try {
+                await fetch('/api/repeat_word', { method: 'POST' });
+            } catch (err) {
+                console.error("Failed to repeat word", err);
+            }
+            await listen();
+        }
 
         function updateScore(score) {
             if (score) {
@@ -167,21 +334,17 @@
             defBox.style.display = 'none';
             defBox.innerText = "";
             nextBtn.disabled = true;
-            listenBtn.disabled = true;
+            resumeBtn.style.display = 'none';
 
             try {
                 const response = await fetch('/api/next_word', { method: 'POST' });
                 const data = await response.json();
 
                 if (response.ok) {
-                    statusEl.innerText = "Waiting for your answer...";
-                    listenBtn.disabled = false;
-
-                    if (data.definition) {
-                        defBox.innerText = "Hint: " + data.definition;
-                        defBox.style.display = 'block';
-                    }
+                    statusEl.innerText = "Waiting for your answer (or hint request)...";
                     updateScore(data.score);
+                    // Automatically trigger listen
+                    await listen();
                 } else {
                     statusEl.innerText = "Error: " + data.error;
                 }
@@ -193,11 +356,20 @@
             }
         }
 
-        async function listen() {
+        async function listen(retryCount = 0) {
+            const MAX_RETRIES = 3;
             setLoading(true);
+
+            // Wait for speech to finish before saying "Listening"
+            try {
+                await fetch('/api/wait_for_speech');
+            } catch (err) {
+                console.error("Wait for speech failed", err);
+            }
+
             statusEl.innerText = "Listening (10s)...";
-            listenBtn.disabled = true;
             nextBtn.disabled = true;
+            resumeBtn.style.display = 'none';
 
             try {
                 const response = await fetch('/api/listen', { method: 'POST' });
@@ -205,28 +377,72 @@
 
                 updateScore(data.score);
 
-                if (data.result === 'correct') {
+                if (data.result === 'hint') {
+                    if (data.type !== 'repeat') {
+                        // Show the specific hint field (except for repeat)
+                        const fieldId = `hint-${data.type}`;
+                        if (!document.getElementById(fieldId)) {
+                            let fieldLabel = data.type.charAt(0).toUpperCase() + data.type.slice(1);
+                            const hintHtml = `<div class="definition-field" id="${fieldId}"><span class="field-label">${fieldLabel}:</span> ${data.text}</div>`;
+                            defBox.innerHTML += hintHtml; // Accumulate only new hint types
+                        }
+                        defBox.style.display = 'block';
+                        statusEl.innerText = "Hint provided";
+                    } else {
+                        statusEl.innerText = "Repeating word...";
+                    }
+
+                    // Automatically listen again for the answer after a hint (reset retries)
+                    await listen(0);
+                    return; // Prevent further execution of this call's finally block
+                } else if (data.result === 'paused') {
+                    statusEl.innerText = "Agent is paused. Click Resume to continue.";
+                    resumeBtn.style.display = 'inline-block';
+                    nextBtn.style.display = 'none'; // Hide next button when paused
+                    return; // Exit early to keep nextBtn hidden
+                } else if (data.result === 'correct') {
                     resultEl.innerText = "CORRECT! ✅";
                     resultEl.className = "result correct";
                     statusEl.innerText = "You said: " + data.heard;
+                    if (data.action === 'repeated') {
+                        await listen(0);
+                        return;
+                    }
                 } else if (data.result === 'incorrect') {
                     resultEl.innerText = "INCORRECT ❌";
                     resultEl.className = "result incorrect";
                     statusEl.innerText = "You said: " + data.heard + " (Target: " + data.target + ")";
+                    if (data.action === 'repeated') {
+                        await listen(0);
+                        return;
+                    }
                 } else {
-                    statusEl.innerText = "Didn't hear anything.";
+                    if (retryCount < MAX_RETRIES) {
+                        statusEl.innerText = "Didn't hear anything. Retrying (" + (retryCount + 1) + "/" + MAX_RETRIES + ")...";
+                        await listen(retryCount + 1);
+                        return; // Prevent further execution of this call's finally block
+                    } else {
+                        statusEl.innerText = "Stopped listening. Click 'Next Word' to try again.";
+                    }
                 }
             } catch (err) {
                 statusEl.innerText = "Error processing answer.";
             } finally {
                 setLoading(false);
-                nextBtn.disabled = false;
+                // Only re-enable and show nextBtn if we are NOT in a paused or recursive listen state
+                // (Though recursion is handled by the calls themselves, the final finally will run)
+                if (statusEl.innerText.indexOf("paused") === -1 && statusEl.innerText.indexOf("Retrying") === -1) {
+                    nextBtn.disabled = false;
+                    nextBtn.style.display = 'inline-block';
+                }
             }
         }
 
         function setLoading(isLoading) {
             loader.style.display = isLoading ? "inline-block" : "none";
         }
+
+        document.addEventListener('DOMContentLoaded', loadFilters);
     </script>
 </body>
 

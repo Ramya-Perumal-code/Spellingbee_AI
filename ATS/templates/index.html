@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered ATS Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-bg: #0f172a;
+            --accent-color: #38bdf8;
+            --text-main: #f8fafc;
+            --card-bg: #1e293b;
+            --success-color: #22c55e;
+            --error-color: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            width: 95%;
+            max-width: 900px;
+            animation: fadeIn 0.8s ease-out;
+            margin: 2rem 0;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 1.25rem;
+            border-radius: 1rem;
+            border: 1px solid #334155;
+            background-color: #0f172a;
+            color: white;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 120px;
+            box-sizing: border-box;
+            transition: all 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.1);
+        }
+
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            color: #94a3b8;
+            cursor: pointer;
+            border: 2px dashed #334155;
+            border-radius: 1rem;
+            background: rgba(15, 23, 42, 0.5);
+            text-align: center;
+        }
+
+        button {
+            width: 100%;
+            padding: 1.25rem;
+            border: none;
+            border-radius: 1rem;
+            background: linear-gradient(to right, #0284c7, #4f46e5);
+            color: white;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        #result {
+            margin-top: 3rem;
+            padding: 2rem;
+            border-radius: 1.5rem;
+            background-color: #0f172a;
+            display: none;
+            border: 1px solid #334155;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2.5rem;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid #334155;
+        }
+
+        .leaderboard-table th,
+        .leaderboard-table td {
+            padding: 1.25rem;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+
+        .leaderboard-table th {
+            background: rgba(15, 23, 42, 0.8);
+            color: var(--accent-color);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.15em;
+            font-weight: 700;
+        }
+
+        .leaderboard-table tr:hover {
+            background: rgba(56, 189, 248, 0.08);
+            cursor: pointer;
+        }
+
+        .result-detail {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 2.5rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid #334155;
+        }
+
+        @media (max-width: 768px) {
+            .result-detail {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .score-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(30, 41, 59, 0.8);
+            padding: 2rem;
+            border-radius: 1.5rem;
+            border: 1px solid #475569;
+        }
+
+        .score-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 6px solid var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--accent-color);
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+        }
+
+        .keyword-tag {
+            display: inline-block;
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            margin: 0.3rem;
+            font-size: 0.9rem;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            font-weight: 500;
+        }
+
+        .summary-box {
+            line-height: 1.8;
+            color: #cbd5e1;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 1rem;
+        }
+
+        .badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.75rem;
+            font-weight: 800;
+            font-size: 0.8rem;
+        }
+
+        .badge-high {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .badge-med {
+            background: rgba(234, 179, 8, 0.2);
+            color: #facc15;
+            border: 1px solid rgba(234, 179, Yellow, 0.3);
+        }
+
+        .badge-low {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: var(--accent-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Smart ATS System</h1>
+
+        <div class="form-group">
+            <label>Job Description (Paste text or use URL)</label>
+            <div style="display: flex; gap: 15px; margin-bottom: 1.5rem;">
+                <input type="text" id="jd-url" placeholder="Paste Job URL (LinkedIn, etc.)"
+                    style="flex:1; padding: 1rem; border-radius: 0.75rem; border: 1px solid #334155; background: #0f172a; color: white;">
+                <button onclick="scrapeJD()"
+                    style="width: auto; margin:0; padding: 0 2rem; font-size: 0.9rem;">Scrape</button>
+            </div>
+            <textarea id="jd" placeholder="Paste the job description here..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Upload Resumes (PDF) - Select multiple for batch!</label>
+            <input type="file" id="resume" accept=".pdf" multiple>
+        </div>
+
+        <button id="analyzeBtn" onclick="analyzeResume()">Analyze Match</button>
+
+        <div id="loader" class="loader"></div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let myChart = null;
+        let globalResults = [];
+
+        async function scrapeJD() {
+            const url = document.getElementById('jd-url').value;
+            if (!url) {
+                alert("Please provide a URL!");
+                return;
+            }
+
+            try {
+                const response = await fetch('/scrape', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+                const data = await response.json();
+                if (data.text) {
+                    document.getElementById('jd').value = data.text;
+                } else {
+                    alert("Error scraping URL: " + data.error);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("An error occurred during scraping.");
+            }
+        }
+
+        async function analyzeResume() {
+            const jd = document.getElementById('jd').value;
+            const resumeFiles = document.getElementById('resume').files;
+            const resultDiv = document.getElementById('result');
+            const loader = document.getElementById('loader');
+            const btn = document.getElementById('analyzeBtn');
+
+            if (!jd || resumeFiles.length === 0) {
+                alert("Please provide both Job Description and at least one Resume!");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('jd', jd);
+            for (let i = 0; i < resumeFiles.length; i++) {
+                formData.append('resume', resumeFiles[i]);
+            }
+
+            loader.style.display = 'block';
+            resultDiv.style.display = 'none';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.results) {
+                    globalResults = data.results.map(r => {
+                        if (r.error) return r;
+                        let cleanJson = r.analysis.replace(/```json|```/g, '').trim();
+                        try {
+                            return { ...r, parsed: JSON.parse(cleanJson) };
+                        } catch (e) {
+                            return { ...r, error: "Parsing failed" };
+                        }
+                    });
+
+                    renderLeaderboard();
+                    resultDiv.style.display = 'block';
+                }
+            } catch (err) {
+                console.error(err);
+                alert("An error occurred during analysis.");
+            } finally {
+                loader.style.display = 'none';
+                btn.disabled = false;
+            }
+        }
+
+        function renderLeaderboard() {
+            const resultDiv = document.getElementById('result');
+
+            // Sort by match score
+            const sorted = [...globalResults].sort((a, b) => {
+                const scoreA = a.parsed ? parseInt(a.parsed["JD Match"]) : 0;
+                const scoreB = b.parsed ? parseInt(b.parsed["JD Match"]) : 0;
+                return scoreB - scoreA;
+            });
+
+            let tableHtml = `
+                <h2 style="text-align:center; margin-bottom:1.5rem; color:var(--accent-color)">Candidate Leaderboard</h2>
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Candidate File</th>
+                            <th>Score</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            sorted.forEach((r, idx) => {
+                const score = r.parsed ? parseInt(r.parsed["JD Match"]) : 0;
+                const badgeClass = score > 80 ? 'badge-high' : (score > 50 ? 'badge-med' : 'badge-low');
+                const status = score > 80 ? 'Highly Qualified' : (score > 50 ? 'Partial Match' : 'Low Match');
+
+                tableHtml += `
+                    <tr onclick="showDetails(${idx})">
+                        <td>#${idx + 1}</td>
+                        <td style="font-weight:600">${r.filename}</td>
+                        <td style="color:var(--accent-color); font-weight:800">${score}%</td>
+                        <td><span class="badge ${badgeClass}">${status}</span></td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += `</tbody></table><div id="detail-section"></div>`;
+            resultDiv.innerHTML = tableHtml;
+
+            // Auto-show first result details
+            if (sorted.length > 0) showDetails(0);
+        }
+
+        function showDetails(index) {
+            // Re-sort to find the correct item
+            const sorted = [...globalResults].sort((a, b) => {
+                const scoreA = a.parsed ? parseInt(a.parsed["JD Match"]) : 0;
+                const scoreB = b.parsed ? parseInt(b.parsed["JD Match"]) : 0;
+                return scoreB - scoreA;
+            });
+
+            const r = sorted[index];
+            const detailDiv = document.getElementById('detail-section');
+
+            if (r.error) {
+                detailDiv.innerHTML = `<div class="error" style="color:var(--error-color)">Error analyzing ${r.filename}: ${r.error}</div>`;
+                return;
+            }
+
+            const parsed = r.parsed;
+            let keywordsHtml = parsed.MissingKeywords.map(k => `<span class="keyword-tag">${k}</span>`).join('');
+
+            detailDiv.innerHTML = `
+                <div class="result-detail">
+                    <div class="score-box">
+                        <div class="score-circle">${parsed["JD Match"]}</div>
+                        <h3 style="margin:0">${r.filename}</h3>
+                        <p style="color:#94a3b8; text-align:center; font-size:0.9rem">Match Score</p>
+                    </div>
+                    <div class="chart-box">
+                        <h4 style="margin:0 0 10px 0; text-align:center; color:var(--accent-color)">Skill Proficiency</h4>
+                        <div class="chart-container">
+                            <canvas id="skillsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top:20px">
+                    <h4 style="margin: 0 0 10px 0; color: var(--error-color)">Missing Keywords</h4>
+                    <div>${keywordsHtml || "None detected!"}</div>
+                </div>
+                <div class="summary-box">
+                    <h4 style="margin: 0 0 10px 0; color: var(--accent-color)">Profile Summary</h4>
+                    <p>${parsed["Profile Summary"]}</p>
+                </div>
+            `;
+
+            // Render Radar Chart
+            const ctx = document.getElementById('skillsChart').getContext('2d');
+            if (myChart) myChart.destroy();
+
+            const labels = parsed.SkillsMatching.map(s => s.skill);
+            const dataPoints = parsed.SkillsMatching.map(s => s.score);
+
+            myChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Match Score',
+                        data: dataPoints,
+                        fill: true,
+                        backgroundColor: 'rgba(56, 189, 248, 0.25)',
+                        borderColor: 'rgb(56, 189, 248)',
+                        pointBackgroundColor: 'rgb(56, 189, 248)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(56, 189, 248)',
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255,255,255,0.1)' },
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            pointLabels: { color: '#94a3b8', font: { size: 11, weight: 'bold' } },
+                            ticks: { display: false, stepSize: 20 },
+                            suggestedMin: 0,
+                            suggestedMax: 100
+                        }
+                    },
+                    plugins: { legend: { display: false } },
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Smooth scroll to details
+            detailDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+
+</html>
